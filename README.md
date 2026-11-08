@@ -2,13 +2,14 @@
 
 把 Mac 屏幕的四个角变成圆角的菜单栏小工具，效果对标最新 MacBook（MacBook Pro / Air）的屏幕圆角。
 
-![](https://img.shields.io/badge/platform-macOS%2010.13%2B-lightgrey) ![](https://img.shields.io/badge/license-MIT-blue) ![](https://img.shields.io/badge/swift-5-orange)
+![](https://img.shields.io/badge/platform-macOS%2010.13%2B-lightgrey) ![](https://img.shields.io/badge/license-MIT-blue) ![](https://img.shields.io/badge/swift-5-orange) ![](https://img.shields.io/badge/version-1.1.0-brightgreen)
 
 ## 功能
 
 - 屏幕四角黑色遮罩，中间挖出圆角——整块屏幕看起来就是圆角屏
 - **预设风格**：MacBook Pro（38）/ MacBook Air（42）/ 轻微圆角（24），一键切换
 - 滑杆自由调整圆角半径（8–80），设置自动保存
+- **鼠标避开圆角**：光标推到角落会被圆弧挡住，箭头图案不会压到黑色圆角上（可选，需辅助功能权限）
 - 菜单栏常驻（◌ 图标），可随时显示 / 隐藏
 - 支持多显示器、多桌面空间、全屏应用
 - 不拦截鼠标点击、不抢焦点
@@ -26,7 +27,7 @@
 
 ```bash
 ./build.sh
-# 产物: build/RoundedCorners.app 和 dist/RoundedCorners-1.0.0.dmg
+# 产物: build/RoundedCorners.app 和 dist/RoundedCorners-1.1.0.dmg
 ```
 
 只需要 macOS 自带的 Command Line Tools（`xcode-select --install`），不需要完整 Xcode。
@@ -40,12 +41,40 @@
 | 显示/隐藏圆角 | 临时开关遮罩 |
 | 圆角（滑杆） | 8–80 自由调节 |
 | 预设风格 | 三档预设一键切换 |
+| 鼠标避开圆角 | 开启后光标被挡在圆弧内（需辅助功能权限） |
 | 开机自启 | 注册/取消系统登录项 |
 | 退出 | 结束应用 |
 
+## 鼠标避开圆角（v1.1.0 新增）
+
+黑色圆角区域本身只是视觉遮罩，光标照样能钻进去。开启「鼠标避开圆角」后，应用会在四角立一堵**沿圆弧的硬墙**：
+
+- 光标推到角落会被圆弧挡住，怎么怼都进不去黑色区域
+- 往回拉、沿弧滑动完全自由，不会被"吸住"
+- 判定用的是**箭头图案**（尖端 + 向右下延伸的身体）而不是只看尖端，所以整个箭头都不会压在黑角上
+- 拖拽窗口时不干预，避免拖到角落卡住
+
+### 需要授权
+
+监听全局鼠标事件需要「辅助功能」权限：
+
+1. 菜单栏 ◌ → 点「鼠标避开圆角」
+2. 系统设置 → 隐私与安全性 → **辅助功能** → 添加并勾选 `RoundedCorners`
+
+授权后应用会自动检测并生效（无需重启）。菜单项标题会显示当前状态：
+
+| 显示 | 含义 |
+|---|---|
+| 鼠标避开圆角（贴边滑动） | 正常工作 |
+| 鼠标避开圆角（需辅助功能权限） | 还没授权 / 授权已失效 |
+
+> 若授权后仍显示"需要权限"，把该开关关掉再打开一次，或删除条目重新添加。
+
 ## 原理
 
-应用为每块屏幕创建一个无边框透明覆盖窗口（`level = .screenSaver`，不拦截鼠标事件，跟随所有桌面空间），用 `NSBezierPath` 偶奇填充绘制四个角的黑色遮罩、挖出中间圆角区域，视觉上屏幕即为圆角。
+**圆角遮罩**：应用为每块屏幕创建一个无边框透明覆盖窗口（`level = .screenSaver`，不拦截鼠标事件，跟随所有桌面空间），用 `NSBezierPath` 偶奇填充绘制四个角的黑色遮罩、挖出中间圆角区域，视觉上屏幕即为圆角。
+
+**鼠标硬墙**：用 `CGEventTap`（`.cghidEventTap`）监听 `mouseMoved`，把光标坐标投影到与视觉圆角同心的内圈圆弧上，再用 `CGWarpMouseCursorPosition` 把光标物理拉回墙内——只改写事件坐标是**不会**移动屏幕光标的，这是本功能的关键。
 
 ## License
 

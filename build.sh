@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-VERSION="1.0.0"
+VERSION="1.1.0"
 APP_NAME="RoundedCorners"
 BUILD_DIR="build"
 DIST_DIR="dist"
@@ -29,7 +29,9 @@ iconutil -c icns "$BUILD_DIR/AppIcon.iconset" -o "$APP/Contents/Resources/AppIco
 
 echo "==> 写入 Info.plist 并签名"
 cp Info.plist "$APP/Contents/Info.plist"
-codesign -s - -f "$APP"
+# 固定 designated requirement（绑定 bundle id 而非文件指纹）：
+# 这样后续版本更新不会让系统已授予的辅助功能权限失效
+codesign -s - -f --requirements '=designated => identifier "com.workbuddy.roundedcorners"' "$APP"
 
 echo "==> 组装 DMG 内容"
 DMG_STAGE="$BUILD_DIR/dmg"
